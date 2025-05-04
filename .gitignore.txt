@@ -1,0 +1,9 @@
+# Jupyter auto‑checkpoints
+*.ipynb_checkpoints/
+
+# Python byte‑code
+__pycache__/
+*.pyc
+
+# Huge raw data you don't want in history
+data/raw/*
