@@ -6,4 +6,4 @@ __pycache__/
 *.pyc
 
 # Huge raw data you don't want in history
-data/raw/*
+data/splits/*.pkl
