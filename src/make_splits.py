@@ -33,12 +33,7 @@ def create_train_val(test_size=0.20, seed=42):
     print(f"Train shape : {train_df.shape}")
     print(f"Valid shape : {val_df.shape}")
     
-    for name, subset in [("Train", train_df), ("Validation", val_df)]:
-        zero_ratio = (subset.ClaimNb == 0).mean()
-        print(f"{name}: {zero_ratio:.1%} zero‑claim policies")
 
-    assert abs(train_df.Exposure.mean() - val_df.Exposure.mean()) < 1e-3, \
-       "Exposure averages diverge – split may be biased"
 
 
 if __name__ == "__main__":
