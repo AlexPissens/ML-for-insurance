@@ -77,20 +77,6 @@ dev_train = mean_poisson_deviance(y_train, mu_train)
 dev_val   = mean_poisson_deviance(y_val,   mu_val)
 
 print(f"\nMean Poisson deviance  –  train: {dev_train:,.4f}   |   val: {dev_val:,.4f}")
-# --------------------------------------------------------------------
-# 4‑bis  Evaluate *also* on frequency scale  ## NEW
-# --------------------------------------------------------------------
-# 4‑a  convert GLM count‑predictions → frequency
-freq_true_train = y_train / train["Exposure"].values
-freq_true_val   = y_val   / val["Exposure"].values
-freq_pred_train = mu_train / train["Exposure"].values
-freq_pred_val   = mu_val   / val["Exposure"].values
-
-freq_dev_train = mean_poisson_deviance(freq_true_train, freq_pred_train)
-freq_dev_val   = mean_poisson_deviance(freq_true_val,   freq_pred_val)
-
-print(f"\n===  Devia​nce on frequency scale  ===")
-print(f"Mean deviance  –  train: {freq_dev_train:,.4f}   |   val: {freq_dev_val:,.4f}")
 
 # ---------- 5. save predictions for later comparison -----------------
 out_dir = PROJECT_ROOT / "reports" / "predictions"
