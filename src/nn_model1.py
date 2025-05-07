@@ -6,10 +6,13 @@ from pathlib import Path
 from nn_data import (X_train_np, X_val_np,            # frequency inputs
                      y_train as y_train_freq,         # ClaimFreq target
                      y_val   as y_val_freq,
-                     exp_train, exp_val,              # exposures
-                     poisson_freq_loss)               # safe loss
+                     exp_train, exp_val)               # safe loss
 from glm_baseline import mean_poisson_deviance        # count dev metric
+from nn_data import X_train_np, X_val_np, y_train_dev, y_val_dev  # notice the new variables
+from nn_data import exp_val  # if you still need it for evaluation
+from nn_model_poisson_loss import  poisson_dev_loss
 
+# 1. Model architecture
 inputs = tf.keras.Input(shape=(X_train_np.shape[1],))
 x = tf.keras.layers.BatchNormalization()(inputs)   # NEW
 x = tf.keras.layers.Dense(64, activation="relu")(x)
@@ -25,17 +28,24 @@ model   = tf.keras.Model(inputs, outputs)
 opt = tf.keras.optimizers.Adam(1e-4, clipnorm=1.0)
 
 from tensorflow.keras.losses import Poisson
-model.compile(optimizer=opt, loss=Poisson(), metrics=[Poisson()])
+model.compile(optimizer=opt, loss=poisson_dev_loss, metrics=[poisson_dev_loss])
 model.summary()
 
 # 2. Train
 history = model.fit(
-    X_train_np, y_train_freq,
-    validation_data=(X_val_np, y_val_freq),
-    epochs=120,
+    X_train_np, y_train_dev,
+    validation_data=(X_val_np, y_val_dev),
+    epochs=100,
     batch_size=2048,
-    callbacks=[tf.keras.callbacks.EarlyStopping(patience=10,
-                                                restore_best_weights=True)],
+    callbacks=[
+        tf.keras.callbacks.EarlyStopping(
+            monitor="val_poisson_dev_loss",  # your custom loss metric
+            patience=10,                     # wait this many epochs
+            min_delta=1e-4,                  # require at least this improvement
+            mode="min",                      # looking for a minimum
+            restore_best_weights=True
+        )
+    ],
     verbose=2
 )
 
@@ -44,12 +54,21 @@ freq_pred_val  = model.predict(X_val_np, batch_size=4096).flatten()
 count_pred_val = freq_pred_val * exp_val                  # μ̂ (counts)
 
 # 4. Evaluate count‑scale deviance for fair comparison with GLM
-y_val_counts = (y_val_freq * exp_val).astype("float32")   # ClaimNb
-dev_val_nn1  = mean_poisson_deviance(y_val_counts, count_pred_val)
+freq_pred_val  = model.predict(X_val_np).flatten()
+count_pred_val = freq_pred_val * exp_val
+y_val_counts   = y_val_dev[:,0] * y_val_dev[:,1]  # freq × exposure
 
-print("\nValidation mean Poisson deviance (count scale)")
-print("GLM  :", 0.2510)          # replace with your exact GLM value
-print("NN‑1 :", f"{dev_val_nn1:0.4f}")
+from glm_baseline import mean_poisson_deviance
+dev_val = mean_poisson_deviance(y_val_counts, count_pred_val)
+
+print(f"Validation mean Poisson deviance (count scale): {dev_val:.4f}")
+
+#y_val_counts = (y_val_freq * exp_val).astype("float32")   # ClaimNb
+#dev_val_nn1  = mean_poisson_deviance(y_val_counts, count_pred_val)
+
+#print("\nValidation mean Poisson deviance (count scale)")
+#print("GLM  :", 0.2510)          # replace with your exact GLM value
+#print("NN‑1 :", f"{dev_val_nn1:0.4f}")
 
 # 5. Save predictions for plots
 proj = Path(__file__).resolve().parents[1]

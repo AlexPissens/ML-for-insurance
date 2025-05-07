@@ -93,6 +93,9 @@ def poisson_freq_loss(y_true, y_pred, eps=tf.keras.backend.epsilon()):
     dev = 2.0 * (y_pred - y_true + log_term)
     return tf.reduce_mean(dev)
 
+y_train_dev = np.stack([y_train, exp_train], axis=1).astype("float32")
+y_val_dev   = np.stack([y_val,   exp_val  ], axis=1).astype("float32")
+
 # ---------------------------------------------------------------------
 # 7. Quick integrity check when module is run directly
 # ---------------------------------------------------------------------
