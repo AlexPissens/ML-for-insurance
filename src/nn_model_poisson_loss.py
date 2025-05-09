@@ -29,3 +29,29 @@ def poisson_dev_loss(y_true, y_pred):
         + y_pred
     )
     return tf.reduce_mean(dev)
+
+
+def calculate_poisson_deviance(true_counts, pred_counts):
+    """
+    Calculate mean Poisson deviance for observed and predicted counts.
+    Args:
+        true_counts: Array of observed claim counts
+        pred_counts: Array of predicted claim counts
+    Returns:
+        Mean Poisson deviance
+    """
+    import numpy as np
+    
+    # Avoid log(0) or division by 0
+    true_counts = np.array(true_counts)
+    pred_counts = np.array(pred_counts)
+    pred_counts = np.clip(pred_counts, 1e-10, None)  # Avoid zero predictions
+    
+    # Calculate deviance per observation
+    deviance = 2 * (true_counts * np.log(true_counts / pred_counts) - (true_counts - pred_counts))
+    
+    # Handle cases where true_counts = 0 (log term becomes 0)
+    deviance = np.where(true_counts == 0, 2 * pred_counts, deviance)
+    
+    # Return mean deviance
+    return np.mean(deviance)

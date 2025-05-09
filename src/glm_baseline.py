@@ -10,6 +10,7 @@ import joblib, pandas as pd, numpy as np
 import statsmodels.api as sm
 from data_prep import load_clean_df
 import matplotlib.pyplot as plt
+from sklearn.linear_model import PoissonRegressor
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SPLIT_DIR = PROJECT_ROOT / "data" / "splits"
@@ -62,21 +63,44 @@ glm_pois = sm.GLM(
 result = glm_pois.fit()
 print(result.summary())              # <- full coefficient table
 
+# Entraînement GLM avec OFFSET (Slide 111)
+glm = PoissonRegressor(alpha=0.0)
+
+# 👉 On utilise X_train_glm (qui contient la colonne 'offset') et PAS de sample_weight !
+glm.fit(X_train, y_train)
+
+# Prédictions
+pred_train_glm = glm.predict(X_train)
+pred_val_glm = glm.predict(X_val)
+
 # ---------- 4. evaluate deviance -------------------------------------
-def mean_poisson_deviance(y_true, y_pred):
-    """Vectorised mean Poisson deviance."""
-    y_true = y_true.astype(float)
-    return np.mean(
-        2 * (y_pred - y_true + y_true * np.where(y_true == 0, 0, np.log(y_true / y_pred)))
-    )
+#def mean_poisson_deviance(y_true, y_pred):
+#    """Vectorised mean Poisson deviance."""
+#    y_true = y_true.astype(float)
+#    return np.mean(
+#        2 * (y_pred - y_true + y_true * np.where(y_true == 0, 0, np.log(y_true / y_pred)))
+#    )
+
+def mean_poisson_deviance(y_true, y_pred, exposure):
+       epsilon = 1e-7
+       y_pred = np.clip(y_pred, epsilon, None)
+       y_true = np.clip(y_true, epsilon, None)
+       dev = 2 * (y_true * np.log(y_true / y_pred) - (y_true - y_pred))
+       total = np.sum(exposure * dev)
+       mean = total / np.sum(exposure)
+       return mean
+
 
 mu_train = result.predict(X_train, offset=train["offset"])
 mu_val   = result.predict(X_val,   offset=val["offset"])
 
-dev_train = mean_poisson_deviance(y_train, mu_train)
-dev_val   = mean_poisson_deviance(y_val,   mu_val)
+dev_train = mean_poisson_deviance(y_train, mu_train,train["Exposure"])
+dev_val   = mean_poisson_deviance(y_val,   mu_val,val["Exposure"])
+dev_train2 = mean_poisson_deviance(y_train, pred_train_glm,train["Exposure"])
+dev_val2   = mean_poisson_deviance(y_val, pred_val_glm,val["Exposure"])
 
 print(f"\nMean Poisson deviance  –  train: {dev_train:,.4f}   |   val: {dev_val:,.4f}")
+print(f"\nMean Poisson deviance  –  train: {dev_train2:,.4f}   |   val: {dev_val2:,.4f}")
 
 # ---------- 5. save predictions for later comparison -----------------
 out_dir = PROJECT_ROOT / "reports" / "predictions"

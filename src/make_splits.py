@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SPLIT_DIR = PROJECT_ROOT / "data" / "splits"
 SPLIT_DIR.mkdir(exist_ok=True)
 
-def create_train_val(test_size=0.20, seed=56):
+def create_train_val(test_size=0.20, seed=42):
     # ---------- 1. load the cleaned dataframe -------------------
     df = load_clean_df()
     # ---------- 2. create binary flag for stratification --------

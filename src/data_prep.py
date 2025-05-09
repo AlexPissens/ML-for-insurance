@@ -49,13 +49,13 @@ def load_clean_df(csv_path: Path = None) -> pd.DataFrame:
     skewed = ["Density", "BonusMalus"]       # pick after inspecting histograms
     
     for col in skewed:
-        df[f"log_{col}"] = np.log1p(df[col])     # log(1+x) avoids log(0)
+        df[f"log_{col}"] = df[col]     # log(1+x) avoids log(0)
     
     # (optionally drop original or keep both)
     # df.drop(columns=skewed, inplace=True)
     
     # ---------- 7. confirm types --------------------------------
-    print(df.dtypes)
+    #print(df.dtypes)
     
     if (df["Exposure"] == 0).any():
         raise ValueError("Zero exposure rows found – drop or fix before log.")

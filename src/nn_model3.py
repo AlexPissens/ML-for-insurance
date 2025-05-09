@@ -34,15 +34,13 @@ def custom_poisson_loss(y_true, y_pred):
     loss = expected_count - y * tf.math.log(expected_count + 1e-10)
     return tf.reduce_mean(loss)
 
-# Build the Neural Network
+# Build the Neural Network (Shallow with Batch Normalization)
 model = keras.Sequential([
-    layers.Dense(32, activation="relu", input_shape=(X_train.shape[1],)),  # Hidden layer with 10 units
-    layers.Dense(1, activation="exponential")                              # Output layer for positive rate predictions
+    layers.Dense(64, activation="relu", input_shape=(X_train.shape[1],)),  # First hidden layer with 64 units
+    layers.BatchNormalization(),                                            # Batch normalization to stabilize training
+    layers.Dense(32, activation="relu"),   
+    layers.Dense(1, activation="exponential")                               # Output layer for positive rate predictions
 ])
-
-
-
-
 # Compile the model with the custom Poisson loss
 model.compile(
     optimizer="adam",
@@ -59,36 +57,8 @@ history = model.fit(
     verbose=1
 )
 
-# Step 1: Compute observed and predicted means (weighted by exposure)
-observed_freq = y_val_dev[:, 0]  # frequency
-exposure = y_val_dev[:, 1]       # exposure
-y_pred = model.predict(X_val)    # predicted rates
-
-# Weighted observed mean frequency
-observed_mean = np.sum(observed_freq * exposure) / np.sum(exposure)
-
-# Weighted predicted mean frequency
-predicted_mean = np.sum(y_pred.flatten() * exposure) / np.sum(exposure)
-
-# Step 2: Calculate the adjustment factor
-adjustment_factor = observed_mean / predicted_mean
-log_adjustment = np.log(adjustment_factor)
-
-# Step 3: Adjust the bias of the output layer
-output_layer = model.layers[-1]  # Get the output layer
-weights, biases = output_layer.get_weights()
-biases[0] += log_adjustment  # Adjust the bias term
-output_layer.set_weights([weights, biases])
-
-# Step 4: Re-evaluate the model after adjustment
-y_pred_adjusted = model.predict(X_val)
-true_counts = y_val_dev[:, 0] * y_val_dev[:, 1]
-pred_counts_adjusted = y_pred_adjusted * y_val_dev[:, 1]
-
-
-
 # Evaluate the model
-#y_pred = model.predict(X_val)  # Predicted rates
+y_pred = model.predict(X_val)  # Predicted rates
 
 # Compute true counts and predicted counts
 true_counts = y_val_dev[:, 0] * y_val_dev[:, 1]  # frequency * Exposure ≈ ClaimNb
@@ -96,13 +66,7 @@ pred_counts = y_pred * y_val_dev[:, 1]           # predicted rate * Exposure
 
 # Define mean Poisson deviance for evaluation
 
-# Calculate deviance before and after adjustment
-deviance_before = mean_poisson_deviance(true_counts, y_pred*y_val_dev[:, 1] , y_val_dev[:, 1])
-deviance_after = mean_poisson_deviance(true_counts, pred_counts_adjusted,y_val_dev[:, 1])
-
-print(f"Validation Poisson Deviance (before adjustment): {deviance_before / len(true_counts):.4f}")
-print(f"Validation Poisson Deviance (after adjustment): {deviance_after / len(true_counts):.4f}")
-
+   
 
 # Calculate and print the mean Poisson deviance per observation
 deviance=mean_poisson_deviance(true_counts, pred_counts,y_val_dev[:,1])
