@@ -1,7 +1,12 @@
+import pandas as pd
 from tensorflow import keras
 from tensorflow.keras import layers
 from utils.model_utils import custom_poisson_loss, mean_poisson_deviance
 from scripts import nn_data as nd  
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PRED_DIR = PROJECT_ROOT / "reports" / "predictions"
 
 def run_nn_model1():
     X_train = nd.X_train_np
@@ -23,6 +28,7 @@ def run_nn_model1():
     dev_val = mean_poisson_deviance(true_counts, pred_counts, y_val_dev[:, 1])
 
     print(f"NN Model 1 - Val Deviance: {dev_val:.4f}")
+    pd.DataFrame({'PolicyID': nd.idx_val, 'Pred_ClaimNb': pred_counts}).to_csv(PRED_DIR / "NN1_val_preds.csv", index=False)
     return dev_val
 
 if __name__ == "__main__":
